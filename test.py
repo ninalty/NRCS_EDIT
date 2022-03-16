@@ -1,63 +1,63 @@
 from STM import STM
-from pyvis.network import Network
+import Utils
+import pandas as pd
+
+# set file path to retrieve the data
+file_path = '/Users/x-women/Desktop/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_DataStructure/es_inputData/DS_R055BY056ND.xlsx'
+input_file = pd.read_excel(file_path, sheet_name='states')
+input_file = pd.DataFrame(input_file)
 
 # create the graph object for R055BY056ND
 graph = STM()
 
 # add states
-graph.add_state(1,'Reference State')
-graph.add_state(2, 'Native/Invaded State')
-graph.add_state(3, "Invaded Grass State")
+text = input_file[input_file['state type'] == "state"]
 
-# build transition between states
-graph.add_edge(1, 2, 'Introduction of non-native species')
-graph.add_edge(2, 3, 'long-term rest from grazing and fire')
-graph.add_edge(3, 2, 'range seeding with native species with management to control invasive species')
+for index, row in text.iterrows():
+    state_id = row['state']
+    state_name = row['name']
+    meta = row['Description']
+    graph.addState(state_id= state_id, name= state_name, meta= meta)
 
-# plant communities
-# state 1 plant community 1
-graph.add_plant_cumms(1, '1.1', 'Green Needlegrass/Western Wheatgrass',
-                      # rp_low
-                      {'shrub/vine': 25, 'grass/grasslike': 1650, 'forb': 125},
-                      # rp_high
-                      {'shrub/vine': 135, 'grass/grasslike': 2990, 'forb': 275},
-                      # growth_curve
-                      {1:0,2:0,3:3,4:7,5:23,6:42,7:15,8:5,9:4,10:1,11:0,12:0})
+# add plant community for each state
+text_plant = input_file[input_file['state type'] == "community"]
 
-# state 1 plant community 2
-graph.add_plant_cumms(1, '1.2', 'Western Wheatgrass/Blue Grama/Sedge/Green Needlegrass',
-                      # rp_low
-                      None,
-                      # rp_high
-                      None,
-                      # growth_curve
-                      {1:0,2:0,3:3,4:7,5:23,6:42,7:15,8:5,9:4,10:1,11:0,12:0})
+for index, row in text_plant.iterrows():
+    state_id = row['state']
+    plant_id = row['community']
+    meta = row['Description']
+    plant_name = row['name']
+    meta = row['Description']
+    growth_curve = row['plant_growth_curve']
 
-# build pathway between plant community 1.1 and 1.2
-graph.add_pathway(1, '1.1', '1.2', 'spring fire followed by intensive grazing')
-graph.add_pathway(1, '1.2', '1.1', 'return to normal fire and grazing frequencies')
+    rp_low, rp_high, rp = {}, {}, {}
+    for y, x in text_plant[text_plant['community'] == plant_id].iterrows():
+        rp_low[x['plant type']] = x['production low']
+        rp_high[x['plant type']] = x['production high']
+        rp[x['plant type']] = x['production RV']
 
-# # to know the number of states
-# graph.get_state_list()
-# # or
-# graph.num_states
-#
-# # to know the number of plant communities of a state
-# graph.get_comm_list(1)
+    graph.addPlantCummsTostate(state_id, plant_id, plant_name,
+                               rp_low= rp_low, rp_high= rp_high, rp = rp, growth_curve= growth_curve)
+
+# add transition
+input_file = pd.read_excel(file_path, sheet_name='transition')
+input_file = pd.DataFrame(input_file)
+text = input_file[input_file['Transition type'] == "transition"]
+
+for idx, item in text.iterrows():
+    frm_node = item['From state']
+    to_node = item['To state']
+    trigger = item['Mechanism']
+    graph.addTransition(frm= frm_node, to= to_node, trigger= trigger)
+
+# add pathway
+text_plant = input_file[input_file['Transition type'] == 'pathway']
+for idx, item in text_plant.iterrows():
+    graph.addPathway(state_id= item['From state'], frm= item['From community'],
+                     to= item['To community'], trigger= item['Mechanism'])
 
 # graph visualization
-net = Network()
+# Utils.draw(graph_model=graph, title='ES ID State Transition Model', file_name= 'node2.html')
 
-for node in graph.vert_dict.values():
-    net.add_node(node.id, label=node.id)
-
-    for plant_node in node.plant_community.values():
-        net.add_node(plant_node.id, label=plant_node.id, color='#eb4034')
-
-    # add edges
-for node in graph.vert_dict.values():
-    if node.adjacent:
-        for nei in node.adjacent:
-            net.add_edge(node.id, nei.id)
-
-net.show('nodes.html')
+# with annotation and interactive
+Utils.interDraw(graph, 'ttt')
