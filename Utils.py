@@ -1,10 +1,8 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-from netgraph import InteractiveGraph, Graph
+from netgraph import InteractiveGraph
 from pyvis.network import Network
-import mpld3
 
 # graph model visualization
 def draw(graph_model, title, file_name):
@@ -43,8 +41,20 @@ def __wrap(string, max_width):
         s += '\n'
     return s
 
+# turn txt to dataframe
+def txtToDF(input):
+    col_names = input[2].split('\t')
+    df = pd.DataFrame(input[3:])
+    df.columns = ['txt']
+
+    # split column into multi
+    state_data = pd.DataFrame(df['txt'].str.split('\t').values.tolist())
+    state_data.columns = col_names
+
+    return state_data
+
 # interactive graph
-def interDraw(graph, file_name, node_txt, plant_txt,stmt_text, stmt_plant):
+def interDraw(graph, node_txt, plant_data, stmt_text, stmt_plant):
     tables = dict()
 
     net = nx.Graph()
@@ -87,11 +97,11 @@ def interDraw(graph, file_name, node_txt, plant_txt,stmt_text, stmt_plant):
     # add notation
     # state nodes
     for node in net.nodes:
-        if isinstance(node, int):
+        if len(node) == 1:
 
-            row = node_txt[node_txt['state'] == node]
+            row = node_txt[node_txt['"Ecosystem state"'] == node]
             data = [_ for _ in row['Description']]
-            col_name = [_ for _ in row['name']][0]
+            col_name = [_ for _ in row['Name']][0]
             data = {col_name: data[0].split('.')[0]}
             table = pd.DataFrame(data, index=[''])
             table[col_name] = table[col_name].str.wrap(50)
@@ -99,11 +109,10 @@ def interDraw(graph, file_name, node_txt, plant_txt,stmt_text, stmt_plant):
 
         # plant nodes
         else:
-
-            row = plant_txt[plant_txt['community'] == float(node)]
+            row = plant_data[plant_data['"Plant community"'] == float(node)]
             if row.shape[0] != 1:
             # plant_name = [elm for elm in row['plant type']]
-                plant_comp = [row['production low'], row['production RV'], row['production high']]
+                plant_comp = [plant_data['"Production low"'], plant_data['"Production RV"'], plant_data['"Production high"']]
 
                 data = [[elm for elm in plant_comp[0]],
                         [elm for elm in plant_comp[1]],
@@ -117,22 +126,22 @@ def interDraw(graph, file_name, node_txt, plant_txt,stmt_text, stmt_plant):
             tables[node] = table
 
     for edge in net.edges:
-        if isinstance(edge[0], int) and isinstance(edge[0] and edge[1], int):
-            row = stmt_text[stmt_text['From state'] == edge[0]]
-            row = row[row['To state'] == edge[1]]
+        if len(edge[0]) == 1 and len(edge[1]) == 1:
+            row = stmt_text[stmt_text['"From ecosystem state"'] == edge[0]]
+            row = row[row['"To ecosystem state"'] == edge[1]]
             mech = [_ for _ in row['Mechanism']][0].split('.')[0]
             mech = __wrap(mech, 60)
-            data = [[_ for _ in row['From state']], [_ for _ in row['To state']]]
+            data = [[_ for _ in row['"From ecosystem state"']], [_ for _ in row['"To ecosystem state"']]]
             data = [str(x[0]) for x in data]
             table = pd.DataFrame(data, index=['from', 'to'], columns=[mech])
             tables[edge] = table
 
-        elif type(edge[0]) == str and type(edge[1]) == str:
-            row = stmt_plant[stmt_plant['From community'] == float(edge[0])]
-            row = row[row['To community'] == float(edge[1])]
+        elif len(edge[0]) != 1 and len(edge[1]) != 1:
+            row = stmt_plant[stmt_plant['"From plant community"'] == edge[0]]
+            row = row[row['"To plant community"'] == edge[1]]
             mech = [_ for _ in row['Mechanism']][0].split('.')[0]
             mech = __wrap(mech, 60)
-            data = [[_ for _ in row['From community']], [_ for _ in row['To community']]]
+            data = [[_ for _ in row['"From plant community"']], [_ for _ in row['"To plant community"']]]
             data = [str(x[0]) for x in data]
             table = pd.DataFrame(data, index=['from', 'to'], columns=[mech])
             tables[edge] = table

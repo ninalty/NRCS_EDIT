@@ -16,7 +16,7 @@ class STM:
         self.vert_dict[state_id] = new_vertex
 
     # add plant communities to the state
-    def addPlantCummsTostate(self, state_id, plant_id, plant_name,rp_low, rp_high, rp, growth_curve):
+    def addPlantCummsTostate(self, state_id, plant_id, plant_name,rp_low=None, rp_high=None, rp=None, growth_curve=None):
         state = self.__getVertex(state_id)
         state.addPlantCommunity(plant_id, plant_name, rp_low, rp_high, rp, growth_curve)
 

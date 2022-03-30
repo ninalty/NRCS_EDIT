@@ -3,61 +3,96 @@ import Utils
 import pandas as pd
 
 # set file path to retrieve the data
-file_path = '/Users/x-women/Desktop/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_DataStructure/es_inputData/DS_R055BY056ND.xlsx'
-input_file = pd.read_excel(file_path, sheet_name='states')
-input_file = pd.DataFrame(input_file)
+file_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/STM_state/065X_STM.txt"
+plant_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/annual_production/065X_annualProduction.txt"
 
-# create the graph object for R055BY056ND
-graph = STM()
+p = open(plant_path, 'r')
+lines = p.readlines()
+plant_data = Utils.txtToDF(lines)
+plant_data = plant_data[plant_data['"Ecological site ID"'] == 'R065XY029NE']
+# change the column name
+plant_data.columns = ['MLRA', '"Ecological site ID"', '"Ecological site legacy ID"',
+       '"Land use"', '"Ecosystem state"', '"Plant community"', '"Plant type"',
+       '"Production low"', '"Production RV"', '"Production high"']
 
-# add states
-node_text = input_file[input_file['state type'] == "state"]
+# process the last column
+plant_data['"Production high"'] = plant_data['"Production high"'].apply(lambda x: x.replace('\n', ''))
 
-for index, row in node_text.iterrows():
-    state_id = row['state']
-    state_name = row['name']
-    meta = row['Description']
-    graph.addState(state_id= state_id, name= state_name, meta= meta)
+plant_data['"Plant community"'] = plant_data['"Ecosystem state"'] + '.' + plant_data['"Plant community"']
 
-# add plant community for each state
-plant_text = input_file[input_file['state type'] == "community"]
+with open(file_path) as f:
+    lines = f.readlines()
 
-for index, row in plant_text.iterrows():
-    state_id = row['state']
-    plant_id = row['community']
-    meta = row['Description']
-    plant_name = row['name']
-    meta = row['Description']
-    growth_curve = row['plant_growth_curve']
+    # split column into multi
+    state_data = Utils.txtToDF(lines)
 
-    rp_low, rp_high, rp = {}, {}, {}
-    for y, x in plant_text[plant_text['community'] == plant_id].iterrows():
-        rp_low[x['plant type']] = x['production low']
-        rp_high[x['plant type']] = x['production high']
-        rp[x['plant type']] = x['production RV']
+    # to locate the ES site
+    state_data = state_data[state_data['"Ecological site ID"'] == 'R065XY029NE']
 
-    graph.addPlantCummsTostate(state_id, plant_id, plant_name,
-                               rp_low= rp_low, rp_high= rp_high, rp = rp, growth_curve= growth_curve)
+    # create the graph object for R055BY056ND
+    graph = STM()
+
+    # add states
+    node_text = state_data[state_data['"State type"'] == '"ecosystem state"']
+
+    for index, row in node_text.iterrows():
+        state_id = row['"Ecosystem state"']
+        state_name = row['Name']
+        meta = row['Description']
+        graph.addState(state_id= state_id, name= state_name, meta= meta)
+
+    # add plant community for each state
+    plant_text = state_data[state_data['"State type"'] == '"plant community"']
+    # change the plant community id
+    plant_text['"Plant community"'] = plant_text['"Ecosystem state"'] + '.' + plant_text['"Plant community"']
+
+    for index, row in plant_text.iterrows():
+        state_id = row['"Ecosystem state"']
+        plant_id = row['"Plant community"']
+        meta = row['Description']
+        plant_name = row['Name']
+
+        rp_low, rp_high, rp = {}, {}, {}
+        for y, x in plant_data[plant_data['"Plant community"'] == plant_id].iterrows():
+            rp_low[x['"Plant type"']] = x['"Production low"']
+            rp_high[x['"Plant type"']] = x['"Production high"'].replace('\n','')
+            rp[x['"Plant type"']] = x['"Production RV"']
+
+        graph.addPlantCummsTostate(state_id= state_id, plant_id= plant_id, plant_name= plant_name, rp_low= rp_low, rp_high= rp_high, rp= rp)
+
+p.close()
 
 # add transition
-input_file = pd.read_excel(file_path, sheet_name='transition')
-input_file = pd.DataFrame(input_file)
-stmt_text = input_file[input_file['Transition type'] == "transition"]
+file_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/STM_Transition/065X_STMT.txt"
+p = open(file_path, 'r')
+lines = p.readlines()
+transition_data = Utils.txtToDF(lines)
+transition_data = transition_data[transition_data['"Ecological site ID"'] == 'R065XY029NE']
+
+# get the transition data
+transition_data['"Transition type"'] = transition_data['"Transition type"'].apply(lambda x: x.replace('"restoration pathway"', 'transition'))
+transition_data['"Transition type"'] = transition_data['"Transition type"'].apply(lambda x: x.split(' ')[-1])
+transition_data['"Transition type"'] = transition_data['"Transition type"'].apply(lambda x: x.replace('"', ''))
+stmt_text = transition_data[transition_data['"Transition type"'] == "transition"]
 
 for idx, item in stmt_text.iterrows():
-    frm_node = item['From state']
-    to_node = item['To state']
+    frm_node = item['"From ecosystem state"']
+    to_node = item['"To ecosystem state"']
     trigger = item['Mechanism']
     graph.addTransition(frm= frm_node, to= to_node, trigger= trigger)
 
 # add pathway
-stmt_plant = input_file[input_file['Transition type'] == 'pathway']
+stmt_plant = transition_data[transition_data['"Transition type"'] == 'pathway']
+# change the plant community id for pathway
+stmt_plant['"From plant community"'] = stmt_plant['"From ecosystem state"'] + '.' + stmt_plant['"From plant community"']
+stmt_plant['"To plant community"'] = stmt_plant['"To ecosystem state"'] + '.' + stmt_plant['"To plant community"']
+
 for idx, item in stmt_plant.iterrows():
-    graph.addPathway(state_id= item['From state'], frm= item['From community'],
-                     to= item['To community'], trigger= item['Mechanism'])
+    graph.addPathway(state_id= item['"From ecosystem state"'], frm= item['"From plant community"'],
+                     to= item['"To plant community"'], trigger= item['Mechanism'])
 
 # graph visualization
 # Utils.draw(graph_model=graph, title='ES ID State Transition Model', file_name= 'node2.html')
 
 # with annotation and interactive
-Utils.interDraw(graph, 'ttt', node_text, plant_text, stmt_text, stmt_plant)
+Utils.interDraw(graph= graph, node_txt= node_text, plant_data= plant_data, stmt_text= stmt_text, stmt_plant= stmt_plant)
