@@ -1,15 +1,16 @@
 from STM import STM
 import Utils
-import pandas as pd
 
 # set file path to retrieve the data
-file_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/STM_state/065X_STM.txt"
-plant_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/annual_production/065X_annualProduction.txt"
+folder_path = '/Users/x-women/Desktop/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/'
+file_path = folder_path + 'STM_state/065X_STM.txt'
+plant_path = folder_path + "annual_production/065X_annualProduction.txt"
 
 p = open(plant_path, 'r')
 lines = p.readlines()
 plant_data = Utils.txtToDF(lines)
 plant_data = plant_data[plant_data['"Ecological site ID"'] == 'R065XY029NE']
+
 # change the column name
 plant_data.columns = ['MLRA', '"Ecological site ID"', '"Ecological site legacy ID"',
        '"Land use"', '"Ecosystem state"', '"Plant community"', '"Plant type"',
@@ -63,7 +64,7 @@ with open(file_path) as f:
 p.close()
 
 # add transition
-file_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/STM_Transition/065X_STMT.txt"
+file_path = folder_path + "STM_Transition/065X_STMT.txt"
 p = open(file_path, 'r')
 lines = p.readlines()
 transition_data = Utils.txtToDF(lines)
@@ -90,9 +91,6 @@ stmt_plant['"To plant community"'] = stmt_plant['"To ecosystem state"'] + '.' + 
 for idx, item in stmt_plant.iterrows():
     graph.addPathway(state_id= item['"From ecosystem state"'], frm= item['"From plant community"'],
                      to= item['"To plant community"'], trigger= item['Mechanism'])
-
-# graph visualization
-# Utils.draw(graph_model=graph, title='ES ID State Transition Model', file_name= 'node2.html')
 
 # with annotation and interactive
 Utils.interDraw(graph= graph, node_txt= node_text, plant_data= plant_data, stmt_text= stmt_text, stmt_plant= stmt_plant)

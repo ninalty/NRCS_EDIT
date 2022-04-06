@@ -49,9 +49,19 @@ def txtToDF(input):
 
     # split column into multi
     state_data = pd.DataFrame(df['txt'].str.split('\t').values.tolist())
+    state_data = state_data.iloc[:, [x for x in range(15)]]
     state_data.columns = col_names
 
     return state_data
+
+# get the unique values from a list
+def unique(input: list):
+
+    output = set()
+    for x in input:
+        output.add(x)
+
+    return output
 
 # interactive graph
 def interDraw(graph, node_txt, plant_data, stmt_text, stmt_plant):
