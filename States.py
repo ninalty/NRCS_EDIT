@@ -1,58 +1,31 @@
-from typing import Mapping
+from typing import Mapping, Dict
+from dataclasses import dataclass, field
+from collections import defaultdict
 
-# class to build plant community nodes
+@dataclass
 class PlantCommunity:
-    def __init__(self, id, name):
-        # identification of plant community
-        self.id: str = id
-        # name of the plant community
-        self.name: str = name
-        # description of plant community
-        self.meta: str = ''
-        # representative low production
-        self.plant_rp_low: Mapping[str, float] = {}
-        # representative high production
-        self.plant_rp_high: Mapping[str, float] = {}
-        # plant growth curve. is a str can turn to {month: production of dominant plant}
-        self.plant_growth_curve: str = ''
-        # {triggers: PlantCommunity node}
-        self.adjacent: Mapping[str, object] = {}
+    id: str
+    name: str
+    meta: str = ''
+    plant_rp_low: Dict[str, float] = field(default_factory=dict)
+    plant_rp_high: Dict[str, float] = field(default_factory=dict)
+    plant_growth_curve: str = ''
+    adjacent: Dict[str, 'PlantCommunity'] = field(default_factory=dict)
 
-    def add_neighbor(self, neighbor, trigger):
+    def add_neighbor(self, neighbor: 'PlantCommunity', trigger: str) -> None:
         self.adjacent[trigger] = neighbor
 
-# class for states. plantCommunity class will be called to build plant nodes within the state
-class States:
-    def __init__(self, id, name):
-        # identification of state
-        self.id: str = id
+@dataclass
+class State:
+    id: str
+    name: str
+    meta: str = ''
+    adjacent: Dict[str, 'State'] = field(default_factory=dict)
+    plant_community: Dict[str, PlantCommunity] = field(default_factory=dict)
 
-        # name of the state
-        self.name: str = name
+    def add_plant_community(self, plant_id: str, comm_name: str, rp_low: Dict[str, float], rp_high: Dict[str, float], growth_curve: str) -> None:
+        new_plant_comm = PlantCommunity(id=plant_id, name=comm_name, plant_rp_low=rp_low, plant_rp_high=rp_high, plant_growth_curve=growth_curve)
+        self.plant_community[plant_id] = new_plant_comm
 
-        # description of the state
-        self.meta: str = ''
-
-        # {trigger: States node}
-        self.adjacent: Mapping[str, object] = {}
-
-        # {plant_id: PlantCommunity node}
-        self.plant_community: Mapping[str, object] = {}
-
-    # plantCommunity class called to build plant nodes within the state
-    def addPlantCommunity(self, plant_id, comm_name, rp_low, rp_high, rp, growth_curve):
-
-        # create a new PlantCommunity node with assigned id and name
-        new_plantcumm = PlantCommunity(plant_id, comm_name)
-
-        # get all the input filled to the node features
-        new_plantcumm.plant_rp_low = rp_low
-        new_plantcumm.plant_rp_high = rp_high
-        new_plantcumm.plant_rp = rp
-        new_plantcumm.plant_rp_low = growth_curve
-
-        # add this new PlantCommunity node to state's plant community holder
-        self.plant_community[plant_id] = new_plantcumm
-
-    def add_neighbor(self, neighbor, trigger):
+    def add_neighbor(self, neighbor: 'State', trigger: str) -> None:
         self.adjacent[trigger] = neighbor
