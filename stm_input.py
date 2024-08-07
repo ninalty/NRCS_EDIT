@@ -22,7 +22,7 @@ transition = pd.DataFrame({'transition type': [],
                            'name': [],
                            'mechanism': []})
 
-file_path = "C:/Users/ninal/Documents/postdoc UCDavis/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/STM_state/065X_STM.txt"
+file_path = "./UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/STM_state/065X_STM.txt"
 
 with open(file_path) as f:
     lines = f.readlines()
