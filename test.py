@@ -1,10 +1,11 @@
 from STM import STM
 import Utils
+import os
 
 # set file path to retrieve the data
-folder_path = '/Users/x-women/Desktop/UCD_ES_Project/ESM_EDIT/ESM_EDIT_Data/ESM_EDIT_Features/'
-file_path = folder_path + 'STM_state/065X_STM.txt'
-plant_path = folder_path + "annual_production/065X_annualProduction.txt"
+folder_path = os.getcwd() + '/ESM_Code/EDIT_Code/'
+file_path = folder_path + '065X_STM.txt'
+plant_path = folder_path + "065X_annualProduction.txt"
 
 p = open(plant_path, 'r')
 lines = p.readlines()
@@ -40,7 +41,7 @@ with open(file_path) as f:
         state_id = row['"Ecosystem state"']
         state_name = row['Name']
         meta = row['Description']
-        graph.addState(state_id= state_id, name= state_name, meta= meta)
+        graph.add_state(state_id= state_id, name= state_name, meta= meta)
 
     # add plant community for each state
     plant_text = state_data[state_data['"State type"'] == '"plant community"']
@@ -59,12 +60,12 @@ with open(file_path) as f:
             rp_high[x['"Plant type"']] = x['"Production high"'].replace('\n','')
             rp[x['"Plant type"']] = x['"Production RV"']
 
-        graph.addPlantCummsTostate(state_id= state_id, plant_id= plant_id, plant_name= plant_name, rp_low= rp_low, rp_high= rp_high, rp= rp)
+        graph.add_plant_communities_to_state(state_id= state_id, plant_id= plant_id, plant_name= plant_name, rp_low= rp_low, rp_high= rp_high, rp= rp)
 
 p.close()
 
 # add transition
-file_path = folder_path + "STM_Transition/065X_STMT.txt"
+file_path = folder_path + "065X_STMT.txt"
 p = open(file_path, 'r')
 lines = p.readlines()
 transition_data = Utils.txtToDF(lines)
@@ -80,7 +81,7 @@ for idx, item in stmt_text.iterrows():
     frm_node = item['"From ecosystem state"']
     to_node = item['"To ecosystem state"']
     trigger = item['Mechanism']
-    graph.addTransition(frm= frm_node, to= to_node, trigger= trigger)
+    graph.add_transition(frm= frm_node, to= to_node, trigger= trigger)
 
 # add pathway
 stmt_plant = transition_data[transition_data['"Transition type"'] == 'pathway']
@@ -89,7 +90,7 @@ stmt_plant['"From plant community"'] = stmt_plant['"From ecosystem state"'] + '.
 stmt_plant['"To plant community"'] = stmt_plant['"To ecosystem state"'] + '.' + stmt_plant['"To plant community"']
 
 for idx, item in stmt_plant.iterrows():
-    graph.addPathway(state_id= item['"From ecosystem state"'], frm= item['"From plant community"'],
+    graph.add_pathway(state_id= item['"From ecosystem state"'], frm= item['"From plant community"'],
                      to= item['"To plant community"'], trigger= item['Mechanism'])
 
 # with annotation and interactive
